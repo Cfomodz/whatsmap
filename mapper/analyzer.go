@@ -46,35 +46,35 @@ type AnalysisResult struct {
 
 // DeviceAnalysis contains device type inference
 type DeviceAnalysis struct {
-	LikelyOS        string  `json:"likely_os"`       // "ios", "android", "unknown"
-	OSConfidence    float64 `json:"os_confidence"`   // 0-1
-	DeviceCount     int     `json:"device_count"`    // Number of companion devices
-	HasCompanion    bool    `json:"has_companion"`   // Desktop/web client detected
+	LikelyOS        string  `json:"likely_os"`     // "ios", "android", "unknown"
+	OSConfidence    float64 `json:"os_confidence"` // 0-1
+	DeviceCount     int     `json:"device_count"`  // Number of companion devices
+	HasCompanion    bool    `json:"has_companion"` // Desktop/web client detected
 	CompanionActive bool    `json:"companion_active"`
 }
 
 // RTTStatistics contains RTT distribution stats
 type RTTStatistics struct {
-	Count      int     `json:"count"`
-	Mean       float64 `json:"mean"`
-	Median     float64 `json:"median"`
-	StdDev     float64 `json:"std_dev"`
-	Min        float64 `json:"min"`
-	Max        float64 `json:"max"`
-	P5         float64 `json:"p5"`  // 5th percentile
-	P95        float64 `json:"p95"` // 95th percentile
-	Bimodal    bool    `json:"bimodal"`
+	Count        int     `json:"count"`
+	Mean         float64 `json:"mean"`
+	Median       float64 `json:"median"`
+	StdDev       float64 `json:"std_dev"`
+	Min          float64 `json:"min"`
+	Max          float64 `json:"max"`
+	P5           float64 `json:"p5"`  // 5th percentile
+	P95          float64 `json:"p95"` // 95th percentile
+	Bimodal      bool    `json:"bimodal"`
 	ScreenOnAvg  float64 `json:"screen_on_avg"`  // Avg RTT when screen likely on
 	ScreenOffAvg float64 `json:"screen_off_avg"` // Avg RTT when screen likely off
 }
 
 // DailyPattern represents usage patterns throughout the day
 type DailyPattern struct {
-	HourlyActivity [24]HourlyStats `json:"hourly_activity"`
-	PeakHours      []int           `json:"peak_hours"`
-	QuietHours     []int           `json:"quiet_hours"`
-	TypicalWakeTime   string `json:"typical_wake_time"`
-	TypicalSleepTime  string `json:"typical_sleep_time"`
+	HourlyActivity   [24]HourlyStats `json:"hourly_activity"`
+	PeakHours        []int           `json:"peak_hours"`
+	QuietHours       []int           `json:"quiet_hours"`
+	TypicalWakeTime  string          `json:"typical_wake_time"`
+	TypicalSleepTime string          `json:"typical_sleep_time"`
 }
 
 // HourlyStats contains stats for a specific hour
@@ -407,7 +407,7 @@ func (a *Analyzer) detectSleepPattern(pattern *DailyPattern) (wakeTime, sleepTim
 
 	wakeHour := -1
 	sleepHour := -1
-	
+
 	// Find wake time: transition from quiet to active between 4am-11am
 	for hour := 4; hour <= 11; hour++ {
 		prevHour := hour - 1
@@ -553,7 +553,7 @@ func (a *Analyzer) analyzeConnection(measurements []*RTTMeasurement) *Connection
 	// WiFi typically has more consistent, lower RTTs
 	// Cellular has more variation
 	sort.Float64s(successfulRTTs)
-	
+
 	p25 := percentile(successfulRTTs, 25)
 	p75 := percentile(successfulRTTs, 75)
 	iqr := p75 - p25
@@ -716,4 +716,3 @@ DETECTED ACTIVITY PERIODS
 
 	return report
 }
-

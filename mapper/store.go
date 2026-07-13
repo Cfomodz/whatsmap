@@ -493,4 +493,3 @@ func (s *MapperStore) ExportToCSV(ctx context.Context, targetJID string) (string
 	}
 	return csv, nil
 }
-

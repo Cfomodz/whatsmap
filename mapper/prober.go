@@ -305,7 +305,7 @@ func (p *Prober) sendPresenceProbe(ctx context.Context, targetJID types.JID) err
 	p.pendingProbes[probe.MessageID] = probe
 	p.pendingProbesLock.Unlock()
 
-	err := p.client.SubscribePresence(targetJID)
+	err := p.client.SubscribePresence(ctx, targetJID)
 	if err != nil {
 		p.recordFailure(ctx, targetJID, probe, err)
 		return fmt.Errorf("failed to subscribe to presence: %w", err)
@@ -481,4 +481,3 @@ func (p *Prober) CleanupOldProbes(timeout time.Duration) {
 	}
 	p.pendingProbesLock.Unlock()
 }
-

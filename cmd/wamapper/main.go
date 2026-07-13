@@ -25,51 +25,51 @@ import (
 
 var (
 	// Connection flags
-	dbPath      = flag.String("db", "mapper.db", "Path to WhatsApp session database")
-	mapperDB    = flag.String("mapper-db", "rtt_data.db", "Path to RTT measurements database")
-	logLevel    = flag.String("log", "INFO", "Log level (DEBUG, INFO, WARN, ERROR)")
-	
+	dbPath   = flag.String("db", "mapper.db", "Path to WhatsApp session database")
+	mapperDB = flag.String("mapper-db", "rtt_data.db", "Path to RTT measurements database")
+	logLevel = flag.String("log", "INFO", "Log level (DEBUG, INFO, WARN, ERROR)")
+
 	// Mode flags
-	mode        = flag.String("mode", "probe", "Operating mode: probe, analyze, export, qr")
-	
+	mode = flag.String("mode", "probe", "Operating mode: probe, analyze, export, qr")
+
 	// Probe flags
-	target      = flag.String("target", "", "Target phone number (with country code, no +)")
-	interval    = flag.Duration("interval", 2*time.Second, "Probe interval")
-	duration    = flag.Duration("duration", 0, "Probe duration (0 = unlimited)")
-	maxProbes   = flag.Int("max-probes", 0, "Maximum number of probes (0 = unlimited)")
-	probeType   = flag.String("probe-type", "reaction", "Probe type: reaction, receipt, presence")
-	
+	target    = flag.String("target", "", "Target phone number (with country code, no +)")
+	interval  = flag.Duration("interval", 2*time.Second, "Probe interval")
+	duration  = flag.Duration("duration", 0, "Probe duration (0 = unlimited)")
+	maxProbes = flag.Int("max-probes", 0, "Maximum number of probes (0 = unlimited)")
+	probeType = flag.String("probe-type", "reaction", "Probe type: reaction, receipt, presence")
+
 	// Analysis flags
-	outputJSON  = flag.Bool("json", false, "Output analysis as JSON")
-	exportCSV   = flag.String("export-csv", "", "Export measurements to CSV file")
-	
+	outputJSON = flag.Bool("json", false, "Output analysis as JSON")
+	exportCSV  = flag.String("export-csv", "", "Export measurements to CSV file")
+
 	// Info flags
-	showHelp    = flag.Bool("help", false, "Show help message")
-	version     = flag.Bool("version", false, "Show version")
+	showHelp = flag.Bool("help", false, "Show help message")
+	version  = flag.Bool("version", false, "Show version")
 )
 
 const Version = "1.0.0"
 
 func main() {
 	flag.Parse()
-	
+
 	if *showHelp {
 		printHelp()
 		return
 	}
-	
+
 	if *version {
 		fmt.Printf("WhatsApp Mapper v%s\n", Version)
 		fmt.Println("Based on 'Careless Whisper' research (arXiv:2411.11194)")
 		return
 	}
-	
+
 	// Setup logging
 	log := waLog.Stdout("WAMapper", *logLevel, true)
-	
+
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
-	
+
 	// Handle interrupt signals
 	sigChan := make(chan os.Signal, 1)
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
@@ -78,7 +78,7 @@ func main() {
 		log.Infof("Received interrupt signal, shutting down...")
 		cancel()
 	}()
-	
+
 	switch *mode {
 	case "qr":
 		if err := runQRMode(ctx, log); err != nil {
@@ -107,7 +107,7 @@ func main() {
 }
 
 func printHelp() {
-	fmt.Println(`
+	fmt.Print(`
 WhatsApp Mapper - RTT-based Device Activity Monitoring
 =======================================================
 Based on "Careless Whisper" research paper (arXiv:2411.11194)
@@ -186,33 +186,33 @@ For more information, see: https://arxiv.org/abs/2411.11194
 
 func runQRMode(ctx context.Context, log waLog.Logger) error {
 	log.Infof("Starting QR code pairing mode...")
-	
+
 	// Initialize WhatsApp store
 	container, err := sqlstore.New(ctx, "sqlite3", "file:"+*dbPath+"?_foreign_keys=on", log.Sub("Store"))
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer container.Close()
-	
+
 	device, err := container.GetFirstDevice(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get device: %w", err)
 	}
-	
+
 	client := whatsmeow.NewClient(device, log.Sub("Client"))
-	
+
 	if client.Store.ID != nil {
 		log.Infof("Already logged in as %s", client.Store.ID.String())
 		return nil
 	}
-	
+
 	// Get QR channel
 	qrChan, _ := client.GetQRChannel(ctx)
-	
+
 	if err := client.Connect(); err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
-	
+
 	for evt := range qrChan {
 		switch evt.Event {
 		case "code":
@@ -228,7 +228,7 @@ func runQRMode(ctx context.Context, log waLog.Logger) error {
 			log.Warnf("QR code timeout, generating new code...")
 		}
 	}
-	
+
 	return nil
 }
 
@@ -236,55 +236,55 @@ func runProbeMode(ctx context.Context, log waLog.Logger) error {
 	if *target == "" {
 		return fmt.Errorf("target phone number is required (-target flag)")
 	}
-	
+
 	log.Infof("Starting probe mode for target: %s", *target)
-	
+
 	// Initialize WhatsApp store
 	container, err := sqlstore.New(ctx, "sqlite3", "file:"+*dbPath+"?_foreign_keys=on", log.Sub("Store"))
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
 	defer container.Close()
-	
+
 	device, err := container.GetFirstDevice(ctx)
 	if err != nil {
 		return fmt.Errorf("failed to get device: %w", err)
 	}
-	
+
 	client := whatsmeow.NewClient(device, log.Sub("Client"))
-	
+
 	if client.Store.ID == nil {
 		return fmt.Errorf("not logged in - run with -mode qr first")
 	}
-	
+
 	// Initialize mapper store
 	mapperDatabase, err := sql.Open("sqlite3", "file:"+*mapperDB+"?_foreign_keys=on")
 	if err != nil {
 		return fmt.Errorf("failed to open mapper database: %w", err)
 	}
 	defer mapperDatabase.Close()
-	
+
 	store, err := mapper.NewMapperStore(mapperDatabase)
 	if err != nil {
 		return fmt.Errorf("failed to initialize mapper store: %w", err)
 	}
-	
+
 	// Connect to WhatsApp
 	if err := client.Connect(); err != nil {
 		return fmt.Errorf("failed to connect: %w", err)
 	}
 	defer client.Disconnect()
-	
+
 	// Wait for connection
 	if !client.WaitForConnection(30 * time.Second) {
 		return fmt.Errorf("connection timeout")
 	}
-	
+
 	log.Infof("Connected as %s", client.Store.ID.String())
-	
+
 	// Create prober
 	prober := mapper.NewProber(client, store, log.Sub("Prober"))
-	
+
 	// Configure probe
 	config := mapper.ProbeConfig{
 		TargetPhone:   *target,
@@ -294,7 +294,7 @@ func runProbeMode(ctx context.Context, log waLog.Logger) error {
 		Duration:      *duration,
 		StoreResults:  true,
 	}
-	
+
 	log.Infof("Starting probes with config: interval=%v, type=%s", config.ProbeInterval, config.ProbeType)
 	if config.Duration > 0 {
 		log.Infof("Will run for %v", config.Duration)
@@ -302,7 +302,7 @@ func runProbeMode(ctx context.Context, log waLog.Logger) error {
 	if config.MaxProbes > 0 {
 		log.Infof("Will send up to %d probes", config.MaxProbes)
 	}
-	
+
 	// Start cleanup goroutine
 	go func() {
 		ticker := time.NewTicker(30 * time.Second)
@@ -316,16 +316,16 @@ func runProbeMode(ctx context.Context, log waLog.Logger) error {
 			}
 		}
 	}()
-	
+
 	// Run probing
 	if err := prober.Start(ctx, config); err != nil && ctx.Err() == nil {
 		return fmt.Errorf("probing failed: %w", err)
 	}
-	
+
 	total, successful := prober.GetStats()
 	log.Infof("Probing complete. Total: %d, Successful: %d (%.1f%%)",
 		total, successful, float64(successful)/float64(total)*100)
-	
+
 	return nil
 }
 
@@ -333,33 +333,33 @@ func runAnalyzeMode(ctx context.Context, log waLog.Logger) error {
 	if *target == "" {
 		return fmt.Errorf("target phone number is required (-target flag)")
 	}
-	
+
 	log.Infof("Starting analysis for target: %s", *target)
-	
+
 	// Open mapper database
 	mapperDatabase, err := sql.Open("sqlite3", "file:"+*mapperDB+"?_foreign_keys=on")
 	if err != nil {
 		return fmt.Errorf("failed to open mapper database: %w", err)
 	}
 	defer mapperDatabase.Close()
-	
+
 	store, err := mapper.NewMapperStore(mapperDatabase)
 	if err != nil {
 		return fmt.Errorf("failed to initialize mapper store: %w", err)
 	}
-	
+
 	// Create analyzer
 	analyzer := mapper.NewAnalyzer(store)
-	
+
 	// Format target JID
 	targetJID := *target + "@s.whatsapp.net"
-	
+
 	// Run analysis
 	result, err := analyzer.Analyze(ctx, targetJID)
 	if err != nil {
 		return fmt.Errorf("analysis failed: %w", err)
 	}
-	
+
 	// Output results
 	if *outputJSON {
 		jsonData, err := json.MarshalIndent(result, "", "  ")
@@ -371,7 +371,7 @@ func runAnalyzeMode(ctx context.Context, log waLog.Logger) error {
 		report := analyzer.GenerateReport(result)
 		fmt.Println(report)
 	}
-	
+
 	return nil
 }
 
@@ -379,39 +379,39 @@ func runExportMode(ctx context.Context, log waLog.Logger) error {
 	if *target == "" {
 		return fmt.Errorf("target phone number is required (-target flag)")
 	}
-	
+
 	outputPath := *exportCSV
 	if outputPath == "" {
 		outputPath = fmt.Sprintf("%s_measurements.csv", *target)
 	}
-	
+
 	log.Infof("Exporting measurements for %s to %s", *target, outputPath)
-	
+
 	// Open mapper database
 	mapperDatabase, err := sql.Open("sqlite3", "file:"+*mapperDB+"?_foreign_keys=on")
 	if err != nil {
 		return fmt.Errorf("failed to open mapper database: %w", err)
 	}
 	defer mapperDatabase.Close()
-	
+
 	store, err := mapper.NewMapperStore(mapperDatabase)
 	if err != nil {
 		return fmt.Errorf("failed to initialize mapper store: %w", err)
 	}
-	
+
 	// Export to CSV
 	targetJID := *target + "@s.whatsapp.net"
 	csv, err := store.ExportToCSV(ctx, targetJID)
 	if err != nil {
 		return fmt.Errorf("failed to export: %w", err)
 	}
-	
+
 	if err := os.WriteFile(outputPath, []byte(csv), 0644); err != nil {
 		return fmt.Errorf("failed to write file: %w", err)
 	}
-	
+
 	log.Infof("Exported measurements to %s", outputPath)
-	
+
 	// Also print stats
 	stats, err := store.GetStats(ctx, targetJID)
 	if err == nil {
@@ -420,7 +420,7 @@ func runExportMode(ctx context.Context, log waLog.Logger) error {
 			log.Infof("  %s: %v", k, v)
 		}
 	}
-	
+
 	return nil
 }
 
@@ -432,4 +432,3 @@ func printQR(code string) {
 	fmt.Println(code)
 	fmt.Println("\nOr visit: https://web.whatsapp.com and use this code")
 }
-
