@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 )
 
 // newTestStore opens a MapperStore backed by a temporary on-disk sqlite
@@ -20,7 +20,7 @@ func newTestStore(t *testing.T) (*MapperStore, *sql.DB) {
 	t.Helper()
 
 	dbPath := filepath.Join(t.TempDir(), "test.db")
-	db, err := sql.Open("sqlite3", "file:"+dbPath+"?_foreign_keys=on")
+	db, err := sql.Open("sqlite", "file:"+dbPath+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}

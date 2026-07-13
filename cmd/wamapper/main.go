@@ -15,7 +15,7 @@ import (
 	"syscall"
 	"time"
 
-	_ "github.com/mattn/go-sqlite3"
+	_ "modernc.org/sqlite"
 
 	whatsmeow "go.mau.fi/whatsmeow"
 	"go.mau.fi/whatsmeow/mapper"
@@ -188,7 +188,7 @@ func runQRMode(ctx context.Context, log waLog.Logger) error {
 	log.Infof("Starting QR code pairing mode...")
 
 	// Initialize WhatsApp store
-	container, err := sqlstore.New(ctx, "sqlite3", "file:"+*dbPath+"?_foreign_keys=on", log.Sub("Store"))
+	container, err := sqlstore.New(ctx, "sqlite", "file:"+*dbPath+"?_pragma=foreign_keys(1)", log.Sub("Store"))
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
@@ -240,7 +240,7 @@ func runProbeMode(ctx context.Context, log waLog.Logger) error {
 	log.Infof("Starting probe mode for target: %s", *target)
 
 	// Initialize WhatsApp store
-	container, err := sqlstore.New(ctx, "sqlite3", "file:"+*dbPath+"?_foreign_keys=on", log.Sub("Store"))
+	container, err := sqlstore.New(ctx, "sqlite", "file:"+*dbPath+"?_pragma=foreign_keys(1)", log.Sub("Store"))
 	if err != nil {
 		return fmt.Errorf("failed to open database: %w", err)
 	}
@@ -258,7 +258,7 @@ func runProbeMode(ctx context.Context, log waLog.Logger) error {
 	}
 
 	// Initialize mapper store
-	mapperDatabase, err := sql.Open("sqlite3", "file:"+*mapperDB+"?_foreign_keys=on")
+	mapperDatabase, err := sql.Open("sqlite", "file:"+*mapperDB+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		return fmt.Errorf("failed to open mapper database: %w", err)
 	}
@@ -337,7 +337,7 @@ func runAnalyzeMode(ctx context.Context, log waLog.Logger) error {
 	log.Infof("Starting analysis for target: %s", *target)
 
 	// Open mapper database
-	mapperDatabase, err := sql.Open("sqlite3", "file:"+*mapperDB+"?_foreign_keys=on")
+	mapperDatabase, err := sql.Open("sqlite", "file:"+*mapperDB+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		return fmt.Errorf("failed to open mapper database: %w", err)
 	}
@@ -388,7 +388,7 @@ func runExportMode(ctx context.Context, log waLog.Logger) error {
 	log.Infof("Exporting measurements for %s to %s", *target, outputPath)
 
 	// Open mapper database
-	mapperDatabase, err := sql.Open("sqlite3", "file:"+*mapperDB+"?_foreign_keys=on")
+	mapperDatabase, err := sql.Open("sqlite", "file:"+*mapperDB+"?_pragma=foreign_keys(1)")
 	if err != nil {
 		return fmt.Errorf("failed to open mapper database: %w", err)
 	}
